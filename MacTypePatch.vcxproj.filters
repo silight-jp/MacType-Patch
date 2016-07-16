@@ -1,0 +1,154 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="ソース ファイル">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="ヘッダー ファイル">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="リソース ファイル">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="ソース ファイル\EasyHook">
+      <UniqueIdentifier>{4d703d54-6b2f-4b6f-89aa-bad316cc8f1a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\EasyHook\ASM">
+      <UniqueIdentifier>{487045aa-a4f4-4ba0-975b-9cd6dcc7a6ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\EasyHook\Disassembler">
+      <UniqueIdentifier>{00e3df79-a0f0-4b55-aacb-0ddb1ecdd4d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\EasyHook\LocalHook">
+      <UniqueIdentifier>{ab9c49c5-5f32-4909-a606-98b035e8aec0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\EasyHook\Rtl">
+      <UniqueIdentifier>{2e23b014-6979-40c0-8366-d98570dbeeb3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\src">
+      <UniqueIdentifier>{1b47b434-81ec-4451-becc-3bf41c9c9004}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\lock">
+      <UniqueIdentifier>{50721a23-a2cd-4f30-b24e-5726a8c262b8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="EasyHook\Disassembler\libudis86\itab.c">
+      <Filter>ソース ファイル\EasyHook\Disassembler</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\Disassembler\libudis86\syn.c">
+      <Filter>ソース ファイル\EasyHook\Disassembler</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\Disassembler\libudis86\syn-att.c">
+      <Filter>ソース ファイル\EasyHook\Disassembler</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\Disassembler\libudis86\syn-intel.c">
+      <Filter>ソース ファイル\EasyHook\Disassembler</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\Disassembler\libudis86\udis86.c">
+      <Filter>ソース ファイル\EasyHook\Disassembler</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\Disassembler\libudis86\decode.c">
+      <Filter>ソース ファイル\EasyHook\Disassembler</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\LocalHook\barrier.c">
+      <Filter>ソース ファイル\EasyHook\LocalHook</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\LocalHook\caller.c">
+      <Filter>ソース ファイル\EasyHook\LocalHook</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\LocalHook\debug.cpp">
+      <Filter>ソース ファイル\EasyHook\LocalHook</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\LocalHook\install.c">
+      <Filter>ソース ファイル\EasyHook\LocalHook</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\LocalHook\reloc.c">
+      <Filter>ソース ファイル\EasyHook\LocalHook</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\LocalHook\uninstall.c">
+      <Filter>ソース ファイル\EasyHook\LocalHook</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\LocalHook\acl.c">
+      <Filter>ソース ファイル\EasyHook\LocalHook</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\LocalHook\alloc.c">
+      <Filter>ソース ファイル\EasyHook\LocalHook</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\Rtl\error.c">
+      <Filter>ソース ファイル\EasyHook\Rtl</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\Rtl\memory.c">
+      <Filter>ソース ファイル\EasyHook\Rtl</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\Rtl\string.c">
+      <Filter>ソース ファイル\EasyHook\Rtl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dllmain.cpp">
+      <Filter>ソース ファイル\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\EasyHK.cpp">
+      <Filter>ソース ファイル\src</Filter>
+    </ClCompile>
+    <ClCompile Include="EasyHook\EasyHook_dllmain.c">
+      <Filter>ソース ファイル\EasyHook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\direct2d.cpp">
+      <Filter>ソース ファイル\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\directwrite.cpp">
+      <Filter>ソース ファイル\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common.cpp">
+      <Filter>ソース ファイル\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mactype.cpp">
+      <Filter>ソース ファイル\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\userparams.cpp">
+      <Filter>ソース ファイル\src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="EasyHook\ASM\HookSpecific_x64.asm">
+      <Filter>ソース ファイル\EasyHook\ASM</Filter>
+    </MASM>
+    <MASM Include="EasyHook\ASM\HookSpecific_x86.asm">
+      <Filter>ソース ファイル\EasyHook\ASM</Filter>
+    </MASM>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="resource32.rc">
+      <Filter>リソース ファイル</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="resource64.rc">
+      <Filter>リソース ファイル</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\common.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="src\easyhook2.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="src\userparams.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lock\RecursiveLock.h">
+      <Filter>ヘッダー ファイル\lock</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lock\RecursiveMutex.h">
+      <Filter>ヘッダー ファイル\lock</Filter>
+    </ClInclude>
+    <ClInclude Include="Mhook\mhook.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="EasyHook\easyhook.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,20 @@
+This software is Copyright by silight.
+
+Latest version is here.
+http://silight.hatenablog.jp/entry/MacTypePatch
+
+
+And this software is using EasyHook and Mhook.
+
+
+EasyHook v2.7.6035.0 (https://github.com/EasyHook/EasyHook/releases)
+Copyright (c) 2009 Christoph Husse & Copyright (c) 2012 Justin Stenning
+EasyHook is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
+
+
+Mhook v2.4 (http://codefromthe70s.org/mhook24.aspx)
+Copyright (c) 2007-2014, Marton Anka
+Portions Copyright (c) 2007, Matt Conover
+Mhook is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
