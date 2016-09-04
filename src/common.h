@@ -31,6 +31,13 @@ extern void changeHookTargetWithMhook(
 	void** newOriginal
 );
 
+extern void changeHookTargetWithMhookForcibly(
+	void* original,
+	void* dummy,
+	void* impl,
+	void** newOriginal
+);
+
 extern void unhookAll();
 
 extern void initIfStill();

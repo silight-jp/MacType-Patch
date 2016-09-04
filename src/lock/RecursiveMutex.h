@@ -11,8 +11,9 @@ class RecursiveMutex {
 	RecursiveMutex(RecursiveMutex&&) = delete;
 	RecursiveMutex& operator=(RecursiveMutex const&) = delete;
 	RecursiveMutex& operator=(RecursiveMutex&&) = delete;
-	static void* operator new(size_t count);
-	static void* operator new[](size_t count);
+	static void* operator new(size_t count) = delete;
+	static void* operator new[](size_t count) = delete;
+	RecursiveMutex* operator&() = delete;
 public:
 	RecursiveMutex() {
 		InitializeCriticalSection(&cs);

@@ -177,7 +177,7 @@ template<typename IDWriteFactoryN>
 static HRESULT initDWriteRenderingParamsHelper() {
 	IDWriteFactoryN* pDWriteFactoryN;
 	HRESULT hr = DWriteCreateFactory(
-		DWRITE_FACTORY_TYPE_ISOLATED,
+		DWRITE_FACTORY_TYPE_SHARED,
 		__uuidof(IDWriteFactoryN),
 		reinterpret_cast<IUnknown**>(&pDWriteFactoryN)
 	);
@@ -192,6 +192,9 @@ static HRESULT initDWriteRenderingParamsHelper() {
 static void loadRenderingParams(LPCWSTR path) {
 	loadRenderingParams(Direct2DParams, L"Direct2D", path);
 	loadRenderingParams(DirectWriteParams, L"DirectWrite", path);
+}
+
+extern void initDWriteRenderingParams() {
 	HRESULT hr;
 	hr = initDWriteRenderingParamsHelper<IDWriteFactory3>();
 	if (SUCCEEDED(hr)) return;

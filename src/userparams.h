@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <dwrite_3.h>
+#include "common.h"
 
 
 enum class HookTargetEnum {
@@ -13,6 +14,8 @@ struct _GeneralParams {
 	bool isHookTarget = false;
 };
 
+extern void initDWriteRenderingParams();
+
 struct RenderingParams {
 	FLOAT Gamma = 1.5f;
 	FLOAT EnhancedContrast = 1.0f;
@@ -23,6 +26,13 @@ struct RenderingParams {
 	DWRITE_GRID_FIT_MODE GridFitMode = DWRITE_GRID_FIT_MODE_DISABLED;
 	DWRITE_RENDERING_MODE1 RenderingMode1 = DWRITE_RENDERING_MODE1_NATURAL_SYMMETRIC;
 	IDWriteRenderingParams* pDWriteRenderingParams;
+	IDWriteRenderingParams* getDWriteRenderingParams() {
+		auto lock = globalMutex.getLock();
+		if (!pDWriteRenderingParams) {
+			initDWriteRenderingParams();
+		}
+		return pDWriteRenderingParams;
+	}
 };
 
 

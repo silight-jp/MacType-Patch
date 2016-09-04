@@ -54,6 +54,7 @@ NTSTATUS __stdcall LhSetGlobalExclusiveACL(
 
 extern "C" __declspec(dllexport)
 NTSTATUS __stdcall LhUninstallAllHooks() {
+	unhookAll();
 	return _LhUninstallAllHooks();
 }
 

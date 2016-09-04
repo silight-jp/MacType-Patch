@@ -76,12 +76,21 @@ extern void changeHookTargetWithMhook(void* target, void* dummy, void* impl, voi
 	auto lock = globalMutex.getLock();
 	*newOrig = hookAndGetOrig(target, impl);
 	if (*newOrig == target) {
-		*newOrig = target;
 		BOOL isSucceeded = Mhook_SetHook(newOrig, impl);
 		if (!isSucceeded) return;
 		mhookSet.insert(newOrig);
 	}
 	changeMap[target] = dummy;
+}
+
+extern void changeHookTargetWithMhookForcibly(void* target, void* dummy, void* impl, void** newOrig) {
+	auto lock = globalMutex.getLock();
+	*newOrig = target;
+	BOOL isSucceeded = Mhook_SetHook(newOrig, impl);
+	if (isSucceeded) {
+		mhookSet.insert(newOrig);
+		changeMap[target] = dummy;
+	}
 }
 
 extern void* changeHookTargetIfNeed(void* hookTarget) {

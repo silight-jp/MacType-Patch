@@ -8,8 +8,9 @@ class RecursiveLock {
 	RecursiveLock(RecursiveLock const&) = delete;
 	RecursiveLock& operator=(RecursiveLock const&) = delete;
 	RecursiveLock& operator=(RecursiveLock&&) = delete;
-	static void* operator new(size_t count);
-	static void* operator new[](size_t count);
+	static void* operator new(size_t count) = delete;
+	static void* operator new[](size_t count) = delete;
+	RecursiveLock* operator&() = delete;
 public:
 	RecursiveLock(CRITICAL_SECTION* pCS) : pCS(pCS) {
 		EnterCriticalSection(pCS);

@@ -1,3 +1,6 @@
+#include <Sdkddkver.h>
+#undef NTDDI_VERSION
+#define NTDDI_VERSION NTDDI_WIN10_RS1
 #include <d2d1_3.h>
 #include "common.h"
 #include "userparams.h"
@@ -5,6 +8,7 @@
 
 
 static void hookID2D1RenderTargetIfStill(ID2D1RenderTarget* pD2D1RenderTarget);
+static void hookID2D1DeviceContextIfStill(ID2D1DeviceContext* pD2D1DeviceContext);
 static void hookID2D1FactoryIfStill(ID2D1Factory* pD2D1Factory);
 static void hookID2D1DeviceIfStill(ID2D1Device* pD2D1Device);
 
@@ -22,7 +26,7 @@ namespace Impl_ID2D1Device
 			deviceContext
 		);
 		if (SUCCEEDED(hr)) {
-			hookID2D1RenderTargetIfStill(*deviceContext);
+			hookID2D1DeviceContextIfStill(*deviceContext);
 		}
 		return hr;
 	}
@@ -40,7 +44,7 @@ namespace Impl_ID2D1Device1
 			deviceContext1
 		);
 		if (SUCCEEDED(hr)) {
-			hookID2D1RenderTargetIfStill(*deviceContext1);
+			hookID2D1DeviceContextIfStill(*deviceContext1);
 		}
 		return hr;
 	}
@@ -58,7 +62,43 @@ namespace Impl_ID2D1Device2
 			deviceContext2
 		);
 		if (SUCCEEDED(hr)) {
-			hookID2D1RenderTargetIfStill(*deviceContext2);
+			hookID2D1DeviceContextIfStill(*deviceContext2);
+		}
+		return hr;
+	}
+}
+
+namespace Impl_ID2D1Device3
+{
+	static HRESULT WINAPI CreateDeviceContext(
+		ID2D1Device3* This,
+		D2D1_DEVICE_CONTEXT_OPTIONS options,
+		ID2D1DeviceContext3** deviceContext3
+	) {
+		HRESULT hr = This->CreateDeviceContext(
+			options,
+			deviceContext3
+		);
+		if (SUCCEEDED(hr)) {
+			hookID2D1DeviceContextIfStill(*deviceContext3);
+		}
+		return hr;
+	}
+}
+
+namespace Impl_ID2D1Device4
+{
+	static HRESULT WINAPI CreateDeviceContext(
+		ID2D1Device4* This,
+		D2D1_DEVICE_CONTEXT_OPTIONS options,
+		ID2D1DeviceContext4** deviceContext4
+	) {
+		HRESULT hr = This->CreateDeviceContext(
+			options,
+			deviceContext4
+		);
+		if (SUCCEEDED(hr)) {
+			hookID2D1DeviceContextIfStill(*deviceContext4);
 		}
 		return hr;
 	}
@@ -187,6 +227,42 @@ namespace Impl_ID2D1Factory3
 	}
 }
 
+namespace Impl_ID2D1Factory4
+{
+	static HRESULT WINAPI CreateDevice(
+		ID2D1Factory4* This,
+		IDXGIDevice* dxgiDevice,
+		ID2D1Device3** d2dDevice3
+	) {
+		HRESULT hr = This->CreateDevice(
+			dxgiDevice,
+			d2dDevice3
+		);
+		if (SUCCEEDED(hr)) {
+			hookID2D1DeviceIfStill(*d2dDevice3);
+		}
+		return hr;
+	}
+}
+
+namespace Impl_ID2D1Factory5
+{
+	static HRESULT WINAPI CreateDevice(
+		ID2D1Factory5* This,
+		IDXGIDevice* dxgiDevice,
+		ID2D1Device4** d2dDevice4
+	) {
+		HRESULT hr = This->CreateDevice(
+			dxgiDevice,
+			d2dDevice4
+		);
+		if (SUCCEEDED(hr)) {
+			hookID2D1DeviceIfStill(*d2dDevice4);
+		}
+		return hr;
+	}
+}
+
 namespace Impl_ID2D1RenderTarget
 {
 	static HRESULT WINAPI CreateCompatibleRenderTarget(
@@ -221,7 +297,7 @@ namespace Impl_ID2D1RenderTarget
 		ID2D1RenderTarget* This,
 		_In_opt_ IDWriteRenderingParams* textRenderingParams
 	) {
-		This->SetTextRenderingParams(Direct2DParams.pDWriteRenderingParams);
+		This->SetTextRenderingParams(Direct2DParams.getDWriteRenderingParams());
 	}
 }
 
@@ -240,6 +316,16 @@ static void hookID2D1Device1(ID2D1Device1* pD2D1Device1) {
 static void hookID2D1Device2(ID2D1Device2* pD2D1Device2) {
 	void** v = getVtbl(pD2D1Device2);
 	hook(v[12], Impl_ID2D1Device2::CreateDeviceContext);
+}
+
+static void hookID2D1Device3(ID2D1Device3* pD2D1Device3) {
+	void** v = getVtbl(pD2D1Device3);
+	hook(v[15], Impl_ID2D1Device3::CreateDeviceContext);
+}
+
+static void hookID2D1Device4(ID2D1Device4* pD2D1Device4) {
+	void** v = getVtbl(pD2D1Device4);
+	hook(v[16], Impl_ID2D1Device4::CreateDeviceContext);
 }
 
 static void hookID2D1Factory(ID2D1Factory* pD2D1Factory) {
@@ -265,6 +351,16 @@ static void hookID2D1Factory3(ID2D1Factory3* pD2D1Factory3) {
 	hook(v[28], Impl_ID2D1Factory3::CreateDevice);
 }
 
+static void hookID2D1Factory4(ID2D1Factory4* pD2D1Factory4) {
+	void** v = getVtbl(pD2D1Factory4);
+	hook(v[29], Impl_ID2D1Factory4::CreateDevice);
+}
+
+static void hookID2D1Factory5(ID2D1Factory5* pD2D1Factory5) {
+	void** v = getVtbl(pD2D1Factory5);
+	hook(v[30], Impl_ID2D1Factory5::CreateDevice);
+}
+
 static void hookID2D1RenderTarget(ID2D1RenderTarget* pD2D1RenderTarget) {
 	void** v = getVtbl(pD2D1RenderTarget);
 	hook(v[12], Impl_ID2D1RenderTarget::CreateCompatibleRenderTarget);
@@ -281,6 +377,24 @@ static void hookID2D1DeviceIfStill(ID2D1Device* pD2D1Device) {
 		hookID2D1Device(pD2D1Device);
 		hookIfImplemented(pD2D1Device, hookID2D1Device1);
 		hookIfImplemented(pD2D1Device, hookID2D1Device2);
+		hookIfImplemented(pD2D1Device, hookID2D1Device3);
+		hookIfImplemented(pD2D1Device, hookID2D1Device4);
+	}
+}
+
+static void hookID2D1RenderTargetIfStill2(ID2D1RenderTarget* pD2D1RenderTarget) {
+	void** vtbl = getVtbl(pD2D1RenderTarget);
+	auto lock = globalMutex.getLock();
+	if (insertVtbl(vtbl)) {
+		hookID2D1RenderTarget(pD2D1RenderTarget);
+	}
+}
+
+static void hookID2D1DeviceContextIfStill2(ID2D1DeviceContext* pD2D1DeviceContext) {
+	void** vtbl = getVtbl(pD2D1DeviceContext);
+	auto lock = globalMutex.getLock();
+	if (insertVtbl(vtbl)) {
+		hookID2D1RenderTarget(pD2D1DeviceContext);
 	}
 }
 
@@ -289,6 +403,7 @@ static void hookID2D1RenderTargetIfStill(ID2D1RenderTarget* pD2D1RenderTarget) {
 	auto lock = globalMutex.getLock();
 	if (insertVtbl(vtbl)) {
 		hookID2D1RenderTarget(pD2D1RenderTarget);
+		hookIfImplemented(pD2D1RenderTarget, hookID2D1DeviceContextIfStill2);
 		
 		ID2D1Factory* pD2D1Factory;
 		pD2D1RenderTarget->GetFactory(&pD2D1Factory);
@@ -296,7 +411,23 @@ static void hookID2D1RenderTargetIfStill(ID2D1RenderTarget* pD2D1RenderTarget) {
 	}
 	
 	pD2D1RenderTarget->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);
-	pD2D1RenderTarget->SetTextRenderingParams(Direct2DParams.pDWriteRenderingParams);
+	pD2D1RenderTarget->SetTextRenderingParams(Direct2DParams.getDWriteRenderingParams());
+}
+
+static void hookID2D1DeviceContextIfStill(ID2D1DeviceContext* pD2D1DeviceContext) {
+	void** vtbl = getVtbl(pD2D1DeviceContext);
+	auto lock = globalMutex.getLock();
+	if (insertVtbl(vtbl)) {
+		hookID2D1RenderTarget(pD2D1DeviceContext);
+		hookIfImplemented(pD2D1DeviceContext, hookID2D1RenderTargetIfStill2);
+		
+		ID2D1Factory* pD2D1Factory;
+		pD2D1DeviceContext->GetFactory(&pD2D1Factory);
+		hookID2D1FactoryIfStill(pD2D1Factory);
+	}
+	
+	pD2D1DeviceContext->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);
+	pD2D1DeviceContext->SetTextRenderingParams(Direct2DParams.getDWriteRenderingParams());
 }
 
 static void hookID2D1FactoryIfStill(ID2D1Factory* pD2D1Factory) {
@@ -307,6 +438,8 @@ static void hookID2D1FactoryIfStill(ID2D1Factory* pD2D1Factory) {
 		hookIfImplemented(pD2D1Factory, hookID2D1Factory1);
 		hookIfImplemented(pD2D1Factory, hookID2D1Factory2);
 		hookIfImplemented(pD2D1Factory, hookID2D1Factory3);
+		hookIfImplemented(pD2D1Factory, hookID2D1Factory4);
+		hookIfImplemented(pD2D1Factory, hookID2D1Factory5);
 	}
 }
 
@@ -377,7 +510,7 @@ namespace Impl
 			d2dDeviceContext
 		);
 		if (SUCCEEDED(hr)) {
-			hookID2D1RenderTargetIfStill(*d2dDeviceContext);
+			hookID2D1DeviceContextIfStill(*d2dDeviceContext);
 		}
 		return hr;
 	}

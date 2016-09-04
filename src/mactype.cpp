@@ -2,6 +2,7 @@
 #include "common.h"
 
 
+
 namespace Orig
 {
 	static decltype(&::ExtTextOutW) ExtTextOutW;
@@ -74,8 +75,8 @@ namespace Dummy
 		int cChar,
 		LPWSTR pszOut
 	) {
-		auto orig = getWithLock(&Orig::GetTextFaceAliasW);
-		return orig(hdc, cChar, pszOut);
+		auto lock = globalMutex.getLock();
+		return Orig::GetTextFaceAliasW(hdc, cChar, pszOut);
 	}
 	
 	static int WINAPI GetTextFaceW(
@@ -83,8 +84,8 @@ namespace Dummy
 		int nCount,
 		LPWSTR lpFaceName
 	) {
-		auto orig = getWithLock(&Orig::GetTextFaceW);
-		return orig(hdc, nCount, lpFaceName);
+		auto lock = globalMutex.getLock();
+		return Orig::GetTextFaceW(hdc, nCount, lpFaceName);
 	}
 	
 	static BOOL WINAPI TextOutA(
@@ -123,6 +124,18 @@ namespace Impl
 		UINT cbCount,
 		CONST INT *lpDx
 	) {
+		auto lock = globalMutex.getLock();
+		
+		// no support printer
+		if (GetDeviceCaps(hdc, TECHNOLOGY) != DT_RASDISPLAY) {
+			return Orig::ExtTextOutW(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
+		}
+		
+		// do recurse
+		if (!(fuOptions & ETO_GLYPH_INDEX) && !(fuOptions & ETO_IGNORELANGUAGE)) {
+			return Orig::ExtTextOutW(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
+		}
+		
 		if (lpDx && fuOptions & ETO_PDY) {
 			int tx = X, ty = Y, dx = 0, dy = 0;
 			LPCWSTR tStr = lpString;
@@ -147,17 +160,7 @@ namespace Impl
 			return TRUE;
 		}
 		
-		if (lprc && (fuOptions & ETO_CLIPPED) && !(fuOptions & ETO_OPAQUE)) {
-			RECT expand = {
-				lprc->left - 2,
-				lprc->top - 1,
-				lprc->right + 1,
-				lprc->bottom + 1
-			};
-			return Dummy::ExtTextOutW(hdc, X, Y, fuOptions, &expand, lpString, cbCount, lpDx);
-		} else {
-			return Dummy::ExtTextOutW(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
-		}
+		return Dummy::ExtTextOutW(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
 	}
 	
 	static DWORD WINAPI GetGlyphOutlineA(
@@ -236,7 +239,7 @@ extern void initMacTypeIntercept() {
 	
 	FARPROC ExtTextOutWProc = GetProcAddress(hModuleGdi32, "ExtTextOutW");
 	if (ExtTextOutWProc) {
-		changeHookTarget(
+		changeHookTargetWithMhookForcibly(
 			ExtTextOutWProc,
 			Dummy::ExtTextOutW,
 			Impl::ExtTextOutW,
