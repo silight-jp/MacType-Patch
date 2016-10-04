@@ -16,6 +16,9 @@ How to use
 Good Luck!
 
 Version History
+2016/08/28	1.13	Hook New Version of Direct2D.
+			Fixed printer bug.
+			Do not Initialize DirectWrite if software don't use.
 2016/07/16	1.12	EasyHook updated.
 2016/06/27	1.11	ReplaceDirectWriteWithGDI was deleted.
 2016/06/22	1.10	Parameters were reduced.
