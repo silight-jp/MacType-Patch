@@ -163,13 +163,14 @@ namespace Impl
 		CONST INT *lpDx
 	) {
 		// space bug fix
-		if (cbCount > 1 && (GetTextAlign(hdc) & 0x7) == (TA_NOUPDATECP & TA_LEFT)) {
+		if (lpDx && cbCount > 1 && (GetTextAlign(hdc) & 0x7) == (TA_NOUPDATECP & TA_LEFT)) {
 			bool isSucceeded = true;
 			UINT16 space = L' ';
 			if (fuOptions & ETO_GLYPH_INDEX) {
 				isSucceeded = GetGlyphIndicesW(hdc, L" ", 1, &space, GGI_MARK_NONEXISTING_GLYPHS) == 1;
 			}
-			if (isSucceeded) {
+			int textCharacterExtra = GetTextCharacterExtra(hdc);
+			if (isSucceeded && textCharacterExtra != 0x80000000) {
 				WCHAR* textStr = new WCHAR[cbCount];
 				WCHAR* spaceStr = new WCHAR[cbCount];
 				UINT textCount = 0;
@@ -187,6 +188,7 @@ namespace Impl
 								spaceX = 0;
 								spaceY = 0;
 								spaceCount++;
+								textX += textCharacterExtra;
 							} else {
 								textStr[textCount] = lpString[i];
 								textDx[2 * textCount] = textX;
@@ -194,6 +196,7 @@ namespace Impl
 								textX = 0;
 								textY = 0;
 								textCount++;
+								spaceX += textCharacterExtra;
 							}
 							textX += lpDx[2 * i];
 							textY += lpDx[2 * i + 1];
@@ -217,11 +220,13 @@ namespace Impl
 								spaceDx[spaceCount] = spaceX;
 								spaceX = 0;
 								spaceCount++;
+								textX += textCharacterExtra;
 							} else {
 								textStr[textCount] = lpString[i];
 								textDx[textCount] = textX;
 								textX = 0;
 								textCount++;
+								spaceX += textCharacterExtra;
 							}
 							textX += lpDx[i];
 							spaceX += lpDx[i];
@@ -262,22 +267,26 @@ namespace Impl
 	) {
 		// use lpDx in ExtTextOutW_BugFix2
 		if (!lpDx && !(fuOptions & ETO_PDY)) {
-			INT* dx = new INT[cbCount]{};
+			INT* dx = new INT[cbCount];
 			if (dx) {
-				SIZE size = { };
+				SIZE size;
 				BOOL isSucceeded = fuOptions & ETO_GLYPH_INDEX ?
 					GetTextExtentExPointI(hdc, (LPWORD)lpString, cbCount, 0, nullptr, dx, &size) :
 					GetTextExtentExPointW(hdc, lpString, cbCount, 0, nullptr, dx, &size);
 				if (isSucceeded) {
-					for (size_t i = cbCount - 1; i > 0; i--) {
-						dx[i] -= dx[i - 1];
+					int prevTextCharacterExtra = SetTextCharacterExtra(hdc, 0);
+					if (prevTextCharacterExtra != 0x80000000) {
+						for (size_t i = cbCount - 1; i > 0; i--) {
+							dx[i] -= dx[i - 1];
+						}
+						BOOL ret = ExtTextOutW_BugFix2(hdc, X, Y, fuOptions, lprc, lpString, cbCount, dx);
+						SetTextCharacterExtra(hdc, prevTextCharacterExtra);
+						delete[] dx;
+						return ret;
 					}
-					BOOL ret = ExtTextOutW_BugFix2(hdc, X, Y, fuOptions, lprc, lpString, cbCount, dx);
-					delete[] dx;
-					return ret;
 				}
+				delete[] dx;
 			}
-
 		}
 		return ExtTextOutW_BugFix2(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
 	}
