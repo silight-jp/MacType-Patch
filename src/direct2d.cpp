@@ -104,6 +104,43 @@ namespace Impl_ID2D1Device4
 	}
 }
 
+namespace Impl_ID2D1DeviceContext
+{
+	static void WINAPI DrawGlyphRun(
+		ID2D1DeviceContext *This,
+		D2D1_POINT_2F baselineOrigin,
+		CONST DWRITE_GLYPH_RUN *glyphRun,
+		CONST DWRITE_GLYPH_RUN_DESCRIPTION *glyphRunDescription,
+		ID2D1Brush *foregroundBrush,
+		DWRITE_MEASURING_MODE measuringMode
+	) {
+		if (GeneralParams.ForceNoHinting) {
+			D2D1_MATRIX_3X2_F prev;
+			This->GetTransform(&prev);
+			D2D1_MATRIX_3X2_F rotate = prev;
+			rotate.m12 += 1.0f / 0xFFFF;
+			rotate.m21 += 1.0f / 0xFFFF;
+			This->SetTransform(&rotate);
+			This->DrawGlyphRun(
+				baselineOrigin,
+				glyphRun,
+				glyphRunDescription,
+				foregroundBrush,
+				measuringMode
+			);
+			This->SetTransform(&prev);
+		} else {
+			This->DrawGlyphRun(
+				baselineOrigin,
+				glyphRun,
+				glyphRunDescription,
+				foregroundBrush,
+				measuringMode
+			);
+		}
+	}
+}
+
 namespace Impl_ID2D1Factory
 {
 	static HRESULT WINAPI CreateWicBitmapRenderTarget(
@@ -285,7 +322,109 @@ namespace Impl_ID2D1RenderTarget
 		}
 		return hr;
 	}
-	
+
+	static void WINAPI DrawText(
+		ID2D1RenderTarget* This,
+		CONST WCHAR *string,
+		UINT32 stringLength,
+		IDWriteTextFormat *textFormat,
+		CONST D2D1_RECT_F *layoutRect,
+		ID2D1Brush *defaultForegroundBrush,
+		D2D1_DRAW_TEXT_OPTIONS options,
+		DWRITE_MEASURING_MODE measuringMode
+	) {
+		if (GeneralParams.ForceNoHinting) {
+			D2D1_MATRIX_3X2_F prev;
+			This->GetTransform(&prev);
+			D2D1_MATRIX_3X2_F rotate = prev;
+			rotate.m12 += 1.0f / 0xFFFF;
+			rotate.m21 += 1.0f / 0xFFFF;
+			This->SetTransform(&rotate);
+			This->DrawText(
+				string,
+				stringLength,
+				textFormat,
+				layoutRect,
+				defaultForegroundBrush,
+				options,
+				measuringMode
+			);
+			This->SetTransform(&prev);
+		} else {
+			This->DrawText(
+				string,
+				stringLength,
+				textFormat,
+				layoutRect,
+				defaultForegroundBrush,
+				options,
+				measuringMode
+			);
+		}
+	}
+
+	static void WINAPI DrawTextLayout(
+		ID2D1RenderTarget* This,
+		D2D1_POINT_2F origin,
+		IDWriteTextLayout *textLayout,
+		ID2D1Brush *defaultForegroundBrush,
+		D2D1_DRAW_TEXT_OPTIONS options
+	) {
+		if (GeneralParams.ForceNoHinting) {
+			D2D1_MATRIX_3X2_F prev;
+			This->GetTransform(&prev);
+			D2D1_MATRIX_3X2_F rotate = prev;
+			rotate.m12 += 1.0f / 0xFFFF;
+			rotate.m21 += 1.0f / 0xFFFF;
+			This->SetTransform(&rotate);
+			This->DrawTextLayout(
+				origin,
+				textLayout,
+				defaultForegroundBrush,
+				options
+			);
+			This->SetTransform(&prev);
+		} else {
+			This->DrawTextLayout(
+				origin,
+				textLayout,
+				defaultForegroundBrush,
+				options
+			);
+		}
+	}
+
+	static void WINAPI DrawGlyphRun(
+		ID2D1RenderTarget* This,
+		D2D1_POINT_2F baselineOrigin,
+		CONST DWRITE_GLYPH_RUN *glyphRun,
+		ID2D1Brush *foregroundBrush,
+		DWRITE_MEASURING_MODE measuringMode
+	) {
+		if (GeneralParams.ForceNoHinting) {
+			D2D1_MATRIX_3X2_F prev;
+			This->GetTransform(&prev);
+			D2D1_MATRIX_3X2_F rotate = prev;
+			rotate.m12 += 1.0f / 0xFFFF;
+			rotate.m21 += 1.0f / 0xFFFF;
+			This->SetTransform(&rotate);
+			This->DrawGlyphRun(
+				baselineOrigin,
+				glyphRun,
+				foregroundBrush,
+				measuringMode
+			);
+			This->SetTransform(&prev);
+		} else {
+			This->DrawGlyphRun(
+				baselineOrigin,
+				glyphRun,
+				foregroundBrush,
+				measuringMode
+			);
+		}
+	}
+
 	static void WINAPI SetTextAntialiasMode(
 		ID2D1RenderTarget* This,
 		D2D1_TEXT_ANTIALIAS_MODE textAntialiasMode
@@ -364,8 +503,16 @@ static void hookID2D1Factory5(ID2D1Factory5* pD2D1Factory5) {
 static void hookID2D1RenderTarget(ID2D1RenderTarget* pD2D1RenderTarget) {
 	void** v = getVtbl(pD2D1RenderTarget);
 	hook(v[12], Impl_ID2D1RenderTarget::CreateCompatibleRenderTarget);
+	hook(v[27], Impl_ID2D1RenderTarget::DrawText);
+	hook(v[28], Impl_ID2D1RenderTarget::DrawTextLayout);
+	hook(v[29], Impl_ID2D1RenderTarget::DrawGlyphRun);
 	hook(v[34], Impl_ID2D1RenderTarget::SetTextAntialiasMode);
 	hook(v[36], Impl_ID2D1RenderTarget::SetTextRenderingParams);
+}
+
+static void hookID2D1DeviceContext(ID2D1DeviceContext* pD2D1DeviceContext) {
+	void** v = getVtbl(pD2D1DeviceContext);
+	hook(v[82], Impl_ID2D1DeviceContext::DrawGlyphRun);
 }
 
 
@@ -395,6 +542,7 @@ static void hookID2D1DeviceContextIfStill2(ID2D1DeviceContext* pD2D1DeviceContex
 	auto lock = globalMutex.getLock();
 	if (insertVtbl(vtbl)) {
 		hookID2D1RenderTarget(pD2D1DeviceContext);
+		hookID2D1DeviceContext(pD2D1DeviceContext);
 	}
 }
 
@@ -419,6 +567,7 @@ static void hookID2D1DeviceContextIfStill(ID2D1DeviceContext* pD2D1DeviceContext
 	auto lock = globalMutex.getLock();
 	if (insertVtbl(vtbl)) {
 		hookID2D1RenderTarget(pD2D1DeviceContext);
+		hookID2D1DeviceContext(pD2D1DeviceContext);
 		hookIfImplemented(pD2D1DeviceContext, hookID2D1RenderTargetIfStill2);
 		
 		ID2D1Factory* pD2D1Factory;

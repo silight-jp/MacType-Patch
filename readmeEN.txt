@@ -16,6 +16,8 @@ How to use
 Good Luck!
 
 Version History
+2016/10/11	1.17	Bug fix for High DPI.
+			Add ForceNoHinting for Windows Vista or later.
 2016/10/08	1.16	Bug fix.
 2016/10/07	1.15	Bug fix and speed up.
 2016/10/05	1.14	Bug fix for High DPI.

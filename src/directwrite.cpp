@@ -28,15 +28,34 @@ namespace Impl_IDWriteBitmapRenderTarget
 	) {
 		HRESULT hr = E_FAIL;
 		if (FAILED(hr)) {
-			hr = This->DrawGlyphRun(
-				baselineOriginX,
-				baselineOriginY,
-				measuringMode,
-				glyphRun,
-				DirectWriteParams.getDWriteRenderingParams(),
-				textColor,
-				blackBoxRect
-			);
+			if (GeneralParams.ForceNoHinting) {
+				DWRITE_MATRIX prev;
+				This->GetCurrentTransform(&prev);
+				DWRITE_MATRIX rotate = prev;
+				rotate.m12 += 1.0f / 0xFFFF;
+				rotate.m21 += 1.0f / 0xFFFF;
+				This->SetCurrentTransform(&rotate);
+				hr = This->DrawGlyphRun(
+					baselineOriginX,
+					baselineOriginY,
+					measuringMode,
+					glyphRun,
+					DirectWriteParams.getDWriteRenderingParams(),
+					textColor,
+					blackBoxRect
+				);
+				This->SetCurrentTransform(&prev);
+			} else {
+				hr = This->DrawGlyphRun(
+					baselineOriginX,
+					baselineOriginY,
+					measuringMode,
+					glyphRun,
+					DirectWriteParams.getDWriteRenderingParams(),
+					textColor,
+					blackBoxRect
+				);
+			}
 		}
 		if (FAILED(hr)) {
 			hr = This->DrawGlyphRun(
@@ -66,7 +85,7 @@ namespace Impl_IDWriteFactory
 		}
 		return hr;
 	}
-
+	
 	static HRESULT WINAPI GetGdiInterop(
 		IDWriteFactory* This,
 		IDWriteGdiInterop** gdiInterop
@@ -98,7 +117,11 @@ namespace Impl_IDWriteFactory
 				if (transform) {
 					m = *transform;
 					m.m11 *= pixelsPerDip;
+					m.m12 *= pixelsPerDip;
+					m.m21 *= pixelsPerDip;
 					m.m22 *= pixelsPerDip;
+					m.dx *= pixelsPerDip;
+					m.dy *= pixelsPerDip;
 				} else {
 					m.m11 = pixelsPerDip;
 					m.m22 = pixelsPerDip;
@@ -117,12 +140,23 @@ namespace Impl_IDWriteFactory
 				f->Release();
 			}
 		}
-		
 		if (FAILED(hr) && renderingMode != DWRITE_RENDERING_MODE_ALIASED) {
+			DWRITE_MATRIX m;
+			DWRITE_MATRIX const* pm = transform;
+			if (GeneralParams.ForceNoHinting) {
+				if (transform) {
+					m = *transform;
+					m.m12 += 1.0f / 0xFFFF;
+					m.m21 += 1.0f / 0xFFFF;
+				} else {
+					m = { 1, 1.0f / 0xFFFF, 1.0f / 0xFFFF, 1 };
+				}
+				pm = &m;
+			}
 			hr = This->CreateGlyphRunAnalysis(
 				glyphRun,
 				pixelsPerDip,
-				transform,
+				pm,
 				DirectWriteParams.RenderingMode,
 				measuringMode,
 				baselineOriginX,
@@ -183,9 +217,21 @@ namespace Impl_IDWriteFactory2
 			}
 		}
 		if (FAILED(hr) && renderingMode != DWRITE_RENDERING_MODE_ALIASED) {
+			DWRITE_MATRIX m;
+			DWRITE_MATRIX const* pm = transform;
+			if (GeneralParams.ForceNoHinting) {
+				if (transform) {
+					m = *transform;
+					m.m12 += 1.0f / 0xFFFF;
+					m.m21 += 1.0f / 0xFFFF;
+				} else {
+					m = { 1, 1.0f / 0xFFFF, 1.0f / 0xFFFF, 1 };
+				}
+				pm = &m;
+			}
 			hr = This->CreateGlyphRunAnalysis(
 				glyphRun,
-				transform,
+				pm,
 				DirectWriteParams.RenderingMode,
 				measuringMode,
 				DirectWriteParams.GridFitMode,
@@ -231,9 +277,21 @@ namespace Impl_IDWriteFactory3
 	) {
 		HRESULT hr = E_FAIL;
 		if (FAILED(hr) && renderingMode != DWRITE_RENDERING_MODE1_ALIASED) {
+			DWRITE_MATRIX m;
+			DWRITE_MATRIX const* pm = transform;
+			if (GeneralParams.ForceNoHinting) {
+				if (transform) {
+					m = *transform;
+					m.m12 += 1.0f / 0xFFFF;
+					m.m21 += 1.0f / 0xFFFF;
+				} else {
+					m = { 1, 1.0f / 0xFFFF, 1.0f / 0xFFFF, 1 };
+				}
+				pm = &m;
+			}
 			hr = This->CreateGlyphRunAnalysis(
 				glyphRun,
-				transform,
+				pm,
 				DirectWriteParams.RenderingMode1,
 				measuringMode,
 				DirectWriteParams.GridFitMode,
@@ -317,7 +375,6 @@ namespace Impl_IDWriteGlyphRunAnalysis
 
 namespace Impl_IDWriteFontCollection
 {
-
 	static HRESULT WINAPI FindFamilyName(
 		IDWriteFontCollection* This,
 		WCHAR const* familyName,

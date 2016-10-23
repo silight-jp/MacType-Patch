@@ -14,12 +14,13 @@ enum class HookTargetEnum {
 struct _GeneralParams {
 	HookTargetEnum HookTarget = HookTargetEnum::None;
 	bool isHookTarget = false;
+	bool ForceNoHinting = false;
 };
 
 extern void initDWriteRenderingParams();
 
 struct RenderingParams {
-	FLOAT Gamma = 1.5f;
+	FLOAT Gamma = 1.8f;
 	FLOAT EnhancedContrast = 1.0f;
 	FLOAT ClearTypeLevel = 1.0f;
 	DWRITE_PIXEL_GEOMETRY PixelGeometry = DWRITE_PIXEL_GEOMETRY_RGB;

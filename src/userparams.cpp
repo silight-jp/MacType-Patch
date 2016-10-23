@@ -39,6 +39,11 @@ static void loadGeneralParams(LPCWSTR path) {
 		L"HookTarget",
 		(int)GeneralParams.HookTarget,
 		path);
+	GeneralParams.ForceNoHinting = 0 != GetPrivateProfileIntW(
+		L"General",
+		L"ForceNoHinting",
+		(int)GeneralParams.ForceNoHinting,
+		path);
 	
 	wchar_t exePath[_MAX_PATH];
 	GetModuleFileNameW(NULL, exePath, _MAX_PATH);
