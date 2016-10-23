@@ -16,6 +16,9 @@ How to use
 Good Luck!
 
 Version History
+2016/10/05	1.14	Bug fix for High DPI.
+			Bug fix for text including space.
+			Add FontSubstitutes experimentally.
 2016/08/28	1.13	Hook New Version of Direct2D.
 			Fixed printer bug.
 			Do not Initialize DirectWrite if software don't use.

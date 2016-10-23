@@ -1,6 +1,8 @@
 #include "userparams.h"
 
 #include <set>
+#include <map>
+#include <string>
 #include <windows.h>
 #include <dwrite_3.h>
 #include <Shlwapi.h>
@@ -10,7 +12,7 @@
 _GeneralParams GeneralParams;
 RenderingParams DirectWriteParams;
 RenderingParams Direct2DParams;
-
+std::map<std::wstring, std::wstring, std::less<>> FontSubstitutesMap;
 
 
 static void loadExeName(std::set<std::wstring, std::less<>>& set, LPCWSTR section, LPCWSTR path) {
@@ -23,7 +25,7 @@ static void loadExeName(std::set<std::wstring, std::less<>>& set, LPCWSTR sectio
 		if (len >= load) {
 			break;
 		}
-		set.insert(CharLower(p));
+		set.insert(CharLowerW(p));
 		p += len + 1;
 		load -= len + 1;
 	}
@@ -63,6 +65,28 @@ static void loadGeneralParams(LPCWSTR path) {
 			GeneralParams.isHookTarget = false;
 			break;
 	}
+}
+
+static void loadFontSubstitutes(LPCWSTR path) {
+	#define BUFFER_SIZE 4096
+	wchar_t* buffer = new wchar_t[BUFFER_SIZE];
+	size_t load = GetPrivateProfileSectionW(L"FontSubstitutes", buffer, BUFFER_SIZE, path);
+	wchar_t* p = buffer;
+	while (load > 0) {
+		size_t len = wcsnlen(p, load);
+		if (len >= load) {
+			break;
+		}
+		wchar_t* p2 = wcschr(p, L'=');
+		if (p2) {
+			*p2++ = L'\0';
+			FontSubstitutesMap[p] = p2;
+		}
+		p += len + 1;
+		load -= len + 1;
+	}
+	delete[] buffer;
+	#undef BUFFER_SIZE
 }
 
 static void loadRenderingParams(RenderingParams& params, LPCWSTR section, LPCWSTR path) {
@@ -213,7 +237,9 @@ extern void loadUserParams(HMODULE hDllModule) {
 	PathAppendW(path, L"UserParams.ini");
 	
 	loadGeneralParams(path);
+	
 	if (GeneralParams.isHookTarget) {
+		loadFontSubstitutes(path);
 		loadRenderingParams(path);
 	}
 }

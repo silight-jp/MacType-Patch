@@ -10,6 +10,7 @@ static void hookIDWriteBitmapRenderTargetIfStill(IDWriteBitmapRenderTarget* pDWr
 static void hookIDWriteGdiInteropIfStill(IDWriteGdiInterop* pDWriteGdiInterop);
 static void hookIDWriteFactoryIfStill(IDWriteFactory* pDWriteFactory);
 static void hookIDWriteGlyphRunAnalysisIfStill(IDWriteGlyphRunAnalysis* pDWriteGlyphRunAnalysis);
+static void hookIDWriteFontCollectionIfStill(IDWriteFontCollection* pDWriteFontCollection);
 
 
 
@@ -54,6 +55,18 @@ namespace Impl_IDWriteBitmapRenderTarget
 
 namespace Impl_IDWriteFactory
 {
+	static HRESULT WINAPI GetSystemFontCollection(
+		IDWriteFactory* This,
+		IDWriteFontCollection** fontCollection,
+		BOOL checkForUpdates
+	) {
+		HRESULT hr = This->GetSystemFontCollection(fontCollection, checkForUpdates);
+		if (SUCCEEDED(hr)) {
+			hookIDWriteFontCollectionIfStill(*fontCollection);
+		}
+		return hr;
+	}
+
 	static HRESULT WINAPI GetGdiInterop(
 		IDWriteFactory* This,
 		IDWriteGdiInterop** gdiInterop
@@ -81,17 +94,18 @@ namespace Impl_IDWriteFactory
 			IDWriteFactory2* f;
 			hr = This->QueryInterface(&f);
 			if (SUCCEEDED(hr)) {
-				DWRITE_MATRIX m;
-				DWRITE_MATRIX const* pm = transform;
-				if (pm) {
+				DWRITE_MATRIX m = { };
+				if (transform) {
 					m = *transform;
 					m.m11 *= pixelsPerDip;
 					m.m22 *= pixelsPerDip;
-					pm = &m;
+				} else {
+					m.m11 = pixelsPerDip;
+					m.m22 = pixelsPerDip;
 				}
 				hr = f->CreateGlyphRunAnalysis(
 					glyphRun,
-					pm,
+					&m,
 					renderingMode,
 					measuringMode,
 					DWRITE_GRID_FIT_MODE_DEFAULT,
@@ -301,6 +315,29 @@ namespace Impl_IDWriteGlyphRunAnalysis
 	}
 }
 
+namespace Impl_IDWriteFontCollection
+{
+
+	static HRESULT WINAPI FindFamilyName(
+		IDWriteFontCollection* This,
+		WCHAR const* familyName,
+		UINT32* index,
+		BOOL* exists
+	) {
+		if (FontSubstitutesMap.count(familyName)) {
+			HRESULT hr = This->FindFamilyName(
+				FontSubstitutesMap.at(familyName).c_str(),
+				index,
+				exists
+			);
+			if (SUCCEEDED(hr) && *exists) {
+				return hr;
+			}
+		}
+		return This->FindFamilyName(familyName, index, exists);
+	}
+}
+
 
 
 static void hookIDWriteBitmapRenderTarget(IDWriteBitmapRenderTarget* pDWriteBitmapRenderTarget) {
@@ -310,6 +347,7 @@ static void hookIDWriteBitmapRenderTarget(IDWriteBitmapRenderTarget* pDWriteBitm
 
 static void hookIDWriteFactory(IDWriteFactory* pDWriteFactory) {
 	void** v = getVtbl(pDWriteFactory);
+	hook(v[3], Impl_IDWriteFactory::GetSystemFontCollection);
 	hook(v[17], Impl_IDWriteFactory::GetGdiInterop);
 	hook(v[23], Impl_IDWriteFactory::CreateGlyphRunAnalysis);
 }
@@ -332,6 +370,11 @@ static void hookIDWriteGdiInterop(IDWriteGdiInterop* pDWriteGdiInterop) {
 static void hookIDWriteGlyphRunAnalysis(IDWriteGlyphRunAnalysis* pDWriteGlyphRunAnalysis) {
 	void** v = getVtbl(pDWriteGlyphRunAnalysis);
 	hook(v[5], Impl_IDWriteGlyphRunAnalysis::GetAlphaBlendParams);
+}
+
+static void hookIDWriteFontCollection(IDWriteFontCollection* pDWriteFontCollection) {
+	void** v = getVtbl(pDWriteFontCollection);
+	hook(v[5], Impl_IDWriteFontCollection::FindFamilyName);
 }
 
 
@@ -370,14 +413,22 @@ static void hookIDWriteGlyphRunAnalysisIfStill(IDWriteGlyphRunAnalysis* pDWriteG
 	}
 }
 
+static void hookIDWriteFontCollectionIfStill(IDWriteFontCollection* pDWriteFontCollection) {
+	void** vtbl = getVtbl(pDWriteFontCollection);
+	auto lock = globalMutex.getLock();
+	if (insertVtbl(vtbl)) {
+		hookIDWriteFontCollection(pDWriteFontCollection);
+	}
+}
+
 
 
 namespace Impl
 {
 	static HRESULT WINAPI DWriteCreateFactory(
-		__in   DWRITE_FACTORY_TYPE factoryType,
-		__in   REFIID iid,
-		__out  IUnknown **factory
+		DWRITE_FACTORY_TYPE factoryType,
+		REFIID iid,
+		IUnknown **factory
 	) {
 		HRESULT hr = ::DWriteCreateFactory(factoryType, iid, factory);
 		if (SUCCEEDED(hr)) {

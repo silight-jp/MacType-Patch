@@ -135,29 +135,84 @@ namespace Impl
 		if (!(fuOptions & ETO_GLYPH_INDEX) && !(fuOptions & ETO_IGNORELANGUAGE)) {
 			return Orig::ExtTextOutW(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
 		}
-		
-		if (lpDx && fuOptions & ETO_PDY) {
-			int tx = X, ty = Y, dx = 0, dy = 0;
-			LPCWSTR tStr = lpString;
-			UINT tCount = 0;
-			CONST INT *tDx = lpDx;
-			for (size_t i = 0; i < cbCount; i++) {
-				tCount++;
-				if (i < cbCount - 1) {
-					dx += lpDx[2 * i];
-					dy += lpDx[2 * i + 1];
-					if (dy == 0) continue;
-				}
-				Dummy::ExtTextOutW(hdc, tx, ty, fuOptions, lprc, tStr, tCount, tDx);
-				tx += dx;
-				ty -= dy;
-				dx = 0;
-				dy = 0;
-				tStr = &lpString[i + 1];
-				tCount = 0;
-				tDx = &lpDx[2 * i + 2];
+
+		// bug fix
+		if (lpString && lpDx) {
+			// support opaque
+			if (fuOptions & ETO_OPAQUE) {
+				Orig::ExtTextOutW(hdc, X, Y, fuOptions, lprc, NULL, 0, NULL);
+				fuOptions &= ~ETO_OPAQUE;
 			}
-			return TRUE;
+
+			// bug fix of space
+			thread_local bool inBugFix = false;
+			if (!inBugFix && cbCount > 1 && (GetTextAlign(hdc) & 0x7) == (TA_NOUPDATECP & TA_LEFT) && fuOptions & ETO_GLYPH_INDEX) {
+				inBugFix = true;
+
+				UINT16 space;
+				DWORD count = GetGlyphIndicesW(hdc, L" ", 1, &space, GGI_MARK_NONEXISTING_GLYPHS);
+				if (count == 1) {
+					size_t begin = 0;
+					int px = X, py = Y, nx = X, ny = Y;
+					for (size_t i = 0; i < cbCount; i++) {
+						if (lpString[i] == space || i == cbCount - 1) {
+							int count = i - begin;
+							if (count > 0) {
+								Impl::ExtTextOutW(
+									hdc,
+									px,
+									py,
+									fuOptions,
+									lprc,
+									&lpString[begin],
+									count,
+									&lpDx[fuOptions & ETO_PDY ? 2 * begin : begin]
+								);
+							}
+							Dummy::ExtTextOutW(hdc, nx, ny, fuOptions, lprc, &lpString[i], 1, &lpDx[i]);
+						}
+						if (fuOptions & ETO_PDY) {
+							nx += lpDx[2 * i];
+							ny += lpDx[2 * i + 1];
+						} else {
+							nx += lpDx[i];
+						}
+						if (lpString[i] == space) {
+							px = nx;
+							py = ny;
+							begin = i + 1;
+						}
+					}
+				}
+
+				inBugFix = false;
+				return TRUE;
+			}
+
+			// bug fix of vertical text
+			if (fuOptions & ETO_PDY) {
+				int tx = X, ty = Y, dx = 0, dy = 0;
+				LPCWSTR tStr = lpString;
+				UINT tCount = 0;
+				CONST INT *tDx = lpDx;
+				for (size_t i = 0; i < cbCount; i++) {
+					tCount++;
+					if (i < cbCount - 1) {
+						dx += lpDx[2 * i];
+						dy += lpDx[2 * i + 1];
+						if (dy == 0) continue;
+					}
+					Dummy::ExtTextOutW(hdc, tx, ty, fuOptions, lprc, tStr, tCount, tDx);
+					tx += dx;
+					ty -= dy;
+					dx = 0;
+					dy = 0;
+					tStr = &lpString[i + 1];
+					tCount = 0;
+					tDx = &lpDx[2 * i + 2];
+				}
+				return TRUE;
+			}
 		}
 		
 		return Dummy::ExtTextOutW(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);

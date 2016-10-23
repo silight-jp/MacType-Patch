@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+#include <string>
 #include <windows.h>
 #include <dwrite_3.h>
 #include "common.h"
@@ -39,5 +41,6 @@ struct RenderingParams {
 extern _GeneralParams GeneralParams;
 extern RenderingParams DirectWriteParams;
 extern RenderingParams Direct2DParams;
+extern std::map<std::wstring, std::wstring, std::less<>> FontSubstitutesMap;
 
 extern void loadUserParams(HMODULE hDllModule);
