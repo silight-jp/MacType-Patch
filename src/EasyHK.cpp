@@ -15,7 +15,7 @@ NTSTATUS __stdcall LhInstallHook(
 	
 	InEntryPoint = changeHookTargetIfNeed(InEntryPoint);
 	
-	NTSTATUS isFailed = _LhInstallHook(
+	NTSTATUS isFailed = LhInstallHook2(
 		InEntryPoint,
 		InHookProc,
 		InCallback,

@@ -16,6 +16,8 @@ How to use
 Good Luck!
 
 Version History
+2016/10/15	1.18	Improve compatibility with MacTray.
+			Support DynamicCodePolicy.
 2016/10/11	1.17	Bug fix for High DPI.
 			Add ForceNoHinting for Windows Vista or later.
 2016/10/08	1.16	Bug fix.

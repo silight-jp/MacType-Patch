@@ -27,35 +27,38 @@ namespace Impl_IDWriteBitmapRenderTarget
 		RECT* blackBoxRect
 	) {
 		HRESULT hr = E_FAIL;
-		if (FAILED(hr)) {
-			if (GeneralParams.ForceNoHinting) {
-				DWRITE_MATRIX prev;
-				This->GetCurrentTransform(&prev);
+		if (GeneralParams.ForceNoHinting) {
+			DWRITE_MATRIX prev;
+			hr = This->GetCurrentTransform(&prev);
+			if (SUCCEEDED(hr)) {
 				DWRITE_MATRIX rotate = prev;
 				rotate.m12 += 1.0f / 0xFFFF;
 				rotate.m21 += 1.0f / 0xFFFF;
-				This->SetCurrentTransform(&rotate);
-				hr = This->DrawGlyphRun(
-					baselineOriginX,
-					baselineOriginY,
-					measuringMode,
-					glyphRun,
-					DirectWriteParams.getDWriteRenderingParams(),
-					textColor,
-					blackBoxRect
-				);
-				This->SetCurrentTransform(&prev);
-			} else {
-				hr = This->DrawGlyphRun(
-					baselineOriginX,
-					baselineOriginY,
-					measuringMode,
-					glyphRun,
-					DirectWriteParams.getDWriteRenderingParams(),
-					textColor,
-					blackBoxRect
-				);
+				hr = This->SetCurrentTransform(&rotate);
+				if (SUCCEEDED(hr)) {
+					hr = This->DrawGlyphRun(
+						baselineOriginX,
+						baselineOriginY,
+						measuringMode,
+						glyphRun,
+						DirectWriteParams.getDWriteRenderingParams(),
+						textColor,
+						blackBoxRect
+					);
+					This->SetCurrentTransform(&prev);
+				}
 			}
+		}
+		if (FAILED(hr)) {
+			hr = This->DrawGlyphRun(
+				baselineOriginX,
+				baselineOriginY,
+				measuringMode,
+				glyphRun,
+				DirectWriteParams.getDWriteRenderingParams(),
+				textColor,
+				blackBoxRect
+			);
 		}
 		if (FAILED(hr)) {
 			hr = This->DrawGlyphRun(
@@ -381,14 +384,16 @@ namespace Impl_IDWriteFontCollection
 		UINT32* index,
 		BOOL* exists
 	) {
-		if (FontSubstitutesMap.count(familyName)) {
-			HRESULT hr = This->FindFamilyName(
-				FontSubstitutesMap.at(familyName).c_str(),
-				index,
-				exists
-			);
-			if (SUCCEEDED(hr) && *exists) {
-				return hr;
+		if (familyName && index && exists) {
+			if (FontSubstitutesMap.count(familyName)) {
+				HRESULT hr = This->FindFamilyName(
+					FontSubstitutesMap.at(familyName).c_str(),
+					index,
+					exists
+				);
+				if (SUCCEEDED(hr) && *exists) {
+					return hr;
+				}
 			}
 		}
 		return This->FindFamilyName(familyName, index, exists);
@@ -503,6 +508,8 @@ namespace Impl
 
 
 extern void hookDirectWrite() {
+	auto lock = globalMutex.getLock();
+
 	HMODULE hModuleDWrite = GetModuleHandleW(L"dwrite.dll");
 	if (!hModuleDWrite) return;
 	

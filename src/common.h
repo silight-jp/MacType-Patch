@@ -8,6 +8,13 @@
 extern RecursiveMutex globalMutex;
 
 
+typedef struct _HOOK_TRACE_INFO_ *TRACED_HOOK_HANDLE;
+extern NTSTATUS LhInstallHook2(
+	void* InEntryPoint,
+	void* InHookProc,
+	void* InCallback,
+	TRACED_HOOK_HANDLE OutHandle
+);
 
 extern bool insertVtbl(void** vtbl);
 

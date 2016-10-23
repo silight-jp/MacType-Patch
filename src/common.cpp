@@ -19,6 +19,70 @@ static size_t fpIndex = 0;
 static HOOK_TRACE_INFO htiArray[MAX_HOOK_COUNT];
 static std::unordered_set<void*> fpSet;
 
+extern NTSTATUS LhInstallHook2(
+	void* InEntryPoint,
+	void* InHookProc,
+	void* InCallback,
+	TRACED_HOOK_HANDLE OutHandle
+) {
+	static auto hModule = GetModuleHandleW(L"Kernel32.dll");
+	static auto GetProcessMitigationPolicyProc = GetProcAddress(hModule, "GetProcessMitigationPolicy");
+	static auto pGetProcessMitigationPolicy = (decltype(&GetProcessMitigationPolicy))GetProcessMitigationPolicyProc;
+	static auto GetThreadInformationProc = GetProcAddress(hModule, "GetThreadInformation");
+	static auto pGetThreadInformation = (decltype(&GetThreadInformation))GetThreadInformationProc;
+	static auto SetThreadInformationProc = GetProcAddress(hModule, "SetThreadInformation");
+	static auto pSetThreadInformation = (decltype(&SetThreadInformation))SetThreadInformationProc;
+	
+	if (pGetProcessMitigationPolicy && pGetThreadInformation && pSetThreadInformation) {
+		PROCESS_MITIGATION_DYNAMIC_CODE_POLICY policy;
+		BOOL isSucceeded = pGetProcessMitigationPolicy(
+			GetCurrentProcess(),
+			ProcessDynamicCodePolicy,
+			&policy,
+			sizeof(PROCESS_MITIGATION_DYNAMIC_CODE_POLICY)
+		);
+		
+		if (!isSucceeded) {
+			return -1;
+		}
+		
+		if (policy.ProhibitDynamicCode) {
+			if (!policy.AllowThreadOptOut) {
+				return -1;
+			}
+			
+			HANDLE thread = GetCurrentThread();
+			DWORD prev;
+			pGetThreadInformation(
+				thread,
+				ThreadDynamicCodePolicy,
+				&prev,
+				sizeof(DWORD)
+			);
+			DWORD policy = THREAD_DYNAMIC_CODE_ALLOW;
+			pSetThreadInformation(
+				thread,
+				ThreadDynamicCodePolicy,
+				&policy,
+				sizeof(DWORD)
+			);
+			NTSTATUS ret = _LhInstallHook(
+				InEntryPoint, InHookProc, InCallback, OutHandle
+			);
+			pSetThreadInformation(
+				thread,
+				ThreadDynamicCodePolicy,
+				&prev,
+				sizeof(DWORD)
+			);
+			return ret;
+		}
+	}
+	return _LhInstallHook(
+		InEntryPoint, InHookProc, InCallback, OutHandle
+	);
+}
+
 static void* hookAndGetOrig(void* orig, void* impl) {
 	auto lock = globalMutex.getLock();
 	
@@ -28,7 +92,7 @@ static void* hookAndGetOrig(void* orig, void* impl) {
 	TRACED_HOOK_HANDLE thh = &htiArray[fpIndex];
 	thh->Link = NULL;
 	
-	NTSTATUS isFailed = _LhInstallHook(orig, impl, NULL, thh);
+	NTSTATUS isFailed = LhInstallHook2(orig, impl, NULL, thh);
 	if (isFailed) return orig;
 	
 	ULONG ZERO = 0;
@@ -111,4 +175,9 @@ extern void unhookAll() {
 		mhookSet.clear();
 	}
 	_LhWaitForPendingRemovals();
+	{
+		auto lock = globalMutex.getLock();
+		changeMap.clear();
+		isInited = false;
+	}
 }
