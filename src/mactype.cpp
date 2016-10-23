@@ -114,6 +114,174 @@ namespace Dummy
 
 namespace Impl
 {
+	static BOOL WINAPI ExtTextOutW_BugFix3(
+		HDC hdc,
+		int X,
+		int Y,
+		UINT fuOptions,
+		CONST RECT *lprc,
+		LPCWSTR lpString,
+		UINT cbCount,
+		CONST INT *lpDx
+	) {
+		// bug fix of vertical text
+		if (fuOptions & ETO_PDY) {
+			int tx = X, ty = Y, dx = 0, dy = 0;
+			LPCWSTR tStr = lpString;
+			UINT tCount = 0;
+			CONST INT *tDx = lpDx;
+			for (size_t i = 0; i < cbCount; i++) {
+				tCount++;
+				if (i < cbCount - 1) {
+					dx += lpDx[2 * i];
+					dy += lpDx[2 * i + 1];
+					if (dy == 0) continue;
+				}
+				Dummy::ExtTextOutW(hdc, tx, ty, fuOptions, lprc, tStr, tCount, tDx);
+				tx += dx;
+				ty -= dy;
+				dx = 0;
+				dy = 0;
+				tStr = &lpString[i + 1];
+				tCount = 0;
+				tDx = &lpDx[2 * i + 2];
+			}
+			return TRUE;
+		}
+		return Dummy::ExtTextOutW(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
+	}
+
+
+	static BOOL WINAPI ExtTextOutW_BugFix2(
+		HDC hdc,
+		int X,
+		int Y,
+		UINT fuOptions,
+		CONST RECT *lprc,
+		LPCWSTR lpString,
+		UINT cbCount,
+		CONST INT *lpDx
+	) {
+		// space bug fix
+		if (cbCount > 1 && (GetTextAlign(hdc) & 0x7) == (TA_NOUPDATECP & TA_LEFT)) {
+			bool isSucceeded = true;
+			UINT16 space = L' ';
+			if (fuOptions & ETO_GLYPH_INDEX) {
+				isSucceeded = GetGlyphIndicesW(hdc, L" ", 1, &space, GGI_MARK_NONEXISTING_GLYPHS) == 1;
+			}
+			if (isSucceeded) {
+				WCHAR* textStr = new WCHAR[cbCount];
+				WCHAR* spaceStr = new WCHAR[cbCount];
+				UINT textCount = 0;
+				UINT spaceCount = 0;
+				INT* textDx = new INT[cbCount * 2 + 2];
+				INT* spaceDx = new INT[cbCount * 2 + 2];
+				int textX = 0, textY = 0, spaceX = 0, spaceY = 0;
+				if (textStr && spaceStr && textDx && spaceDx) {
+					if (fuOptions & ETO_PDY) {
+						for (size_t i = 0; i < cbCount; i++) {
+							if (lpString[i] == space) {
+								spaceStr[spaceCount] = lpString[i];
+								spaceDx[2 * spaceCount] = spaceX;
+								spaceDx[2 * spaceCount + 1] = spaceY;
+								spaceX = 0;
+								spaceY = 0;
+								spaceCount++;
+							} else {
+								textStr[textCount] = lpString[i];
+								textDx[2 * textCount] = textX;
+								textDx[2 * textCount + 1] = textY;
+								textX = 0;
+								textY = 0;
+								textCount++;
+							}
+							textX += lpDx[2 * i];
+							textY += lpDx[2 * i + 1];
+							spaceX += lpDx[2 * i];
+							spaceY += lpDx[2 * i + 1];
+						}
+						spaceDx[2 * spaceCount] = spaceX;
+						spaceDx[2 * spaceCount + 1] = spaceY;
+						textDx[2 * textCount] = textX;
+						textDx[2 * textCount + 1] = textY;
+						if (spaceCount) {
+							ExtTextOutW_BugFix3(hdc, X + spaceDx[0], Y - spaceDx[1], fuOptions, lprc, spaceStr, spaceCount, spaceDx + 2);
+						}
+						if (textCount) {
+							ExtTextOutW_BugFix3(hdc, X + textDx[0], Y - textDx[1], fuOptions, lprc, textStr, textCount, textDx + 2);
+						}
+					} else {
+						for (size_t i = 0; i < cbCount; i++) {
+							if (lpString[i] == space) {
+								spaceStr[spaceCount] = lpString[i];
+								spaceDx[spaceCount] = spaceX;
+								spaceX = 0;
+								spaceCount++;
+							} else {
+								textStr[textCount] = lpString[i];
+								textDx[textCount] = textX;
+								textX = 0;
+								textCount++;
+							}
+							textX += lpDx[i];
+							spaceX += lpDx[i];
+						}
+						spaceDx[spaceCount] = spaceX;
+						textDx[textCount] = textX;
+						if (spaceCount) {
+							ExtTextOutW_BugFix3(hdc, X + spaceDx[0], Y, fuOptions, lprc, spaceStr, spaceCount, spaceDx + 1);
+						}
+						if (textCount) {
+							ExtTextOutW_BugFix3(hdc, X + textDx[0], Y, fuOptions, lprc, textStr, textCount, textDx + 1);
+						}
+					}
+				}
+
+				if (textStr) delete[] textStr;
+				if (spaceStr) delete[] spaceStr;
+				if (textDx) delete[] textDx;
+				if (spaceDx) delete[] spaceDx;
+
+				if (textStr && spaceStr && textDx && spaceDx) {
+					return TRUE;
+				}
+			}
+		}
+		return ExtTextOutW_BugFix3(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
+	}
+
+	static BOOL WINAPI ExtTextOutW_BugFix1(
+		HDC hdc,
+		int X,
+		int Y,
+		UINT fuOptions,
+		CONST RECT *lprc,
+		LPCWSTR lpString,
+		UINT cbCount,
+		CONST INT *lpDx
+	) {
+		// use lpDx in ExtTextOutW_BugFix2
+		if (!lpDx && !(fuOptions & ETO_PDY)) {
+			INT* dx = new INT[cbCount]{};
+			if (dx) {
+				SIZE size = { };
+				BOOL isSucceeded = fuOptions & ETO_GLYPH_INDEX ?
+					GetTextExtentExPointI(hdc, (LPWORD)lpString, cbCount, 0, nullptr, dx, &size) :
+					GetTextExtentExPointW(hdc, lpString, cbCount, 0, nullptr, dx, &size);
+				if (isSucceeded) {
+					for (size_t i = cbCount - 1; i > 0; i--) {
+						dx[i] -= dx[i - 1];
+					}
+					BOOL ret = ExtTextOutW_BugFix2(hdc, X, Y, fuOptions, lprc, lpString, cbCount, dx);
+					delete[] dx;
+					return ret;
+				}
+			}
+
+		}
+		return ExtTextOutW_BugFix2(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
+	}
+
 	static BOOL WINAPI ExtTextOutW(
 		HDC hdc,
 		int X,
@@ -125,97 +293,27 @@ namespace Impl
 		CONST INT *lpDx
 	) {
 		auto lock = globalMutex.getLock();
+
+		// invalid arguments
+		bool invalidArguments = !hdc || !lpString || !cbCount;
 		
 		// no support printer
-		if (GetDeviceCaps(hdc, TECHNOLOGY) != DT_RASDISPLAY) {
+		bool noDisplay = GetDeviceCaps(hdc, TECHNOLOGY) != DT_RASDISPLAY;
+
+		// need recurse
+		bool needRecurse = !(fuOptions & ETO_GLYPH_INDEX) && !(fuOptions & ETO_IGNORELANGUAGE);
+
+		if (invalidArguments || noDisplay || needRecurse) {
 			return Orig::ExtTextOutW(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
 		}
-		
-		// do recurse
-		if (!(fuOptions & ETO_GLYPH_INDEX) && !(fuOptions & ETO_IGNORELANGUAGE)) {
-			return Orig::ExtTextOutW(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
+
+		// draw opaque background
+		if (fuOptions & ETO_OPAQUE) {
+			Orig::ExtTextOutW(hdc, X, Y, fuOptions, lprc, NULL, 0, NULL);
+			fuOptions &= ~ETO_OPAQUE;
 		}
 
-		// bug fix
-		if (lpString && lpDx) {
-			// support opaque
-			if (fuOptions & ETO_OPAQUE) {
-				Orig::ExtTextOutW(hdc, X, Y, fuOptions, lprc, NULL, 0, NULL);
-				fuOptions &= ~ETO_OPAQUE;
-			}
-
-			// bug fix of space
-			thread_local bool inBugFix = false;
-			if (!inBugFix && cbCount > 1 && (GetTextAlign(hdc) & 0x7) == (TA_NOUPDATECP & TA_LEFT) && fuOptions & ETO_GLYPH_INDEX) {
-				inBugFix = true;
-
-				UINT16 space;
-				DWORD count = GetGlyphIndicesW(hdc, L" ", 1, &space, GGI_MARK_NONEXISTING_GLYPHS);
-				if (count == 1) {
-					size_t begin = 0;
-					int px = X, py = Y, nx = X, ny = Y;
-					for (size_t i = 0; i < cbCount; i++) {
-						if (lpString[i] == space || i == cbCount - 1) {
-							int count = i - begin;
-							if (count > 0) {
-								Impl::ExtTextOutW(
-									hdc,
-									px,
-									py,
-									fuOptions,
-									lprc,
-									&lpString[begin],
-									count,
-									&lpDx[fuOptions & ETO_PDY ? 2 * begin : begin]
-								);
-							}
-							Dummy::ExtTextOutW(hdc, nx, ny, fuOptions, lprc, &lpString[i], 1, &lpDx[i]);
-						}
-						if (fuOptions & ETO_PDY) {
-							nx += lpDx[2 * i];
-							ny += lpDx[2 * i + 1];
-						} else {
-							nx += lpDx[i];
-						}
-						if (lpString[i] == space) {
-							px = nx;
-							py = ny;
-							begin = i + 1;
-						}
-					}
-				}
-
-				inBugFix = false;
-				return TRUE;
-			}
-
-			// bug fix of vertical text
-			if (fuOptions & ETO_PDY) {
-				int tx = X, ty = Y, dx = 0, dy = 0;
-				LPCWSTR tStr = lpString;
-				UINT tCount = 0;
-				CONST INT *tDx = lpDx;
-				for (size_t i = 0; i < cbCount; i++) {
-					tCount++;
-					if (i < cbCount - 1) {
-						dx += lpDx[2 * i];
-						dy += lpDx[2 * i + 1];
-						if (dy == 0) continue;
-					}
-					Dummy::ExtTextOutW(hdc, tx, ty, fuOptions, lprc, tStr, tCount, tDx);
-					tx += dx;
-					ty -= dy;
-					dx = 0;
-					dy = 0;
-					tStr = &lpString[i + 1];
-					tCount = 0;
-					tDx = &lpDx[2 * i + 2];
-				}
-				return TRUE;
-			}
-		}
-		
-		return Dummy::ExtTextOutW(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
+		return ExtTextOutW_BugFix1(hdc, X, Y, fuOptions, lprc, lpString, cbCount, lpDx);
 	}
 	
 	static DWORD WINAPI GetGlyphOutlineA(
